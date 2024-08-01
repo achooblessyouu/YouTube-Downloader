@@ -17,33 +17,26 @@ def sanitize_filename(title):
         title = title.replace(char, '_')
     return title
 
-def download_video(url, download_path, format_choice, audio_quality, video_quality):
+def download_media(url, download_path, format_choice):
     """
     Download video or audio from a YouTube video.
     """
-    ydl_opts_audio = {
-        'format': 'bestaudio/best',
-        'outtmpl': str(download_path / 'audio.%(ext)s'),
-        'postprocessors': [{
-            'key': 'FFmpegExtractAudio',
-            'preferredcodec': 'm4a',
-            'preferredquality': '192',
-        }],
-    }
-
-    quality_formats = {
-        '720p': 'bestvideo[height<=720]+bestaudio/best',
-        '1080p': 'bestvideo[height<=1080]+bestaudio/best',
-        '1440p': 'bestvideo[height<=1440]+bestaudio/best'
-    }
-
-    ydl_opts_video = {
-        'format': quality_formats.get(video_quality, 'bestvideo+bestaudio/best'),
-        'outtmpl': str(download_path / 'video.%(ext)s'),
-        'merge_output_format': 'mp4',
-    }
-
-    ydl_opts = ydl_opts_audio if format_choice == 'mp3' else ydl_opts_video
+    if format_choice == 'mp3':
+        ydl_opts = {
+            'format': 'bestaudio/best',
+            'outtmpl': str(download_path / 'audio.%(ext)s'),
+            'postprocessors': [{
+                'key': 'FFmpegExtractAudio',
+                'preferredcodec': 'm4a',
+                'preferredquality': '192',
+            }],
+        }
+    else:  # 'mp4'
+        ydl_opts = {
+            'format': 'bestvideo+bestaudio/best',
+            'outtmpl': str(download_path / 'video.%(ext)s'),
+            'merge_output_format': 'mp4',
+        }
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         try:
@@ -68,55 +61,58 @@ def generate_unique_filename(output_path, title, extension):
         i += 1
     return base_file
 
-def convert_to_mp3(input_file, output_path, title, quality):
+def convert_to_mp3(input_file, output_path, title):
     """
-    Convert an M4A file to MP3 format using ffmpeg with the chosen quality settings.
+    Convert an M4A file to MP3 format using ffmpeg with the best available quality.
     """
-    bitrates = {
-        'low': '128k',
-        'medium': '192k',
-        'high': '320k'
-    }
-    
-    bitrate = bitrates.get(quality, '192k')
-
     output_file = generate_unique_filename(output_path, title, 'mp3')
     try:
-        ffmpeg.input(str(input_file)).output(str(output_file), audio_bitrate=bitrate).run()
-        logging.info(f"Conversion to MP3 with {quality} quality complete.")
+        ffmpeg.input(str(input_file)).output(str(output_file), audio_bitrate='192k').run()
+        logging.info("Conversion to MP3 complete.")
         return output_file
     except ffmpeg.Error as e:
         logging.error(f"Conversion error: {e}")
+        return None
+
+def reencode_to_mp4(input_file, output_file):
+    """
+    Re-encode the video and audio to ensure compatibility with MP4.
+    """
+    try:
+        ffmpeg.input(str(input_file)).output(str(output_file), vcodec='libx264', acodec='aac', audio_bitrate='192k').run()
+        logging.info("Re-encoding to MP4 complete.")
+        return output_file
+    except ffmpeg.Error as e:
+        logging.error(f"Re-encoding error: {e}")
         return None
 
 def prompt_user_input():
     """
     Prompt user for input and return the values.
     """
-    url = input("Enter the URL of the YouTube video: ")
-    if not url.startswith("https://www.youtube.com/"):
+    while True:
+        url = input("Enter the URL of the YouTube video: ")
+        if url.startswith("https://www.youtube.com/"):
+            break
         logging.error("Invalid YouTube URL. Please provide a valid URL.")
-        return None, None, None, None
-
-    format_choice = input("Choose format (mp3/mp4): ").strip().lower()
-    if format_choice not in ['mp3', 'mp4']:
+    
+    while True:
+        format_choice = input("Choose format (mp3/mp4): ").strip().lower()
+        if format_choice in ['mp3', 'mp4']:
+            break
         logging.error("Invalid choice. Please choose 'mp3' or 'mp4'.")
-        return None, None, None, None
+    
+    return url, format_choice
 
-    audio_quality = 'medium'
-    video_quality = None
-    if format_choice == 'mp3':
-        audio_quality = input("Choose audio quality (low/medium/high): ").strip().lower()
-        if audio_quality not in ['low', 'medium', 'high']:
-            logging.error("Invalid choice. Please choose 'low', 'medium', or 'high'.")
-            return None, None, None, None
-    else:
-        video_quality = input("Choose video quality (720p/1080p/1440p): ").strip().lower()
-        if video_quality not in ['720p', '1080p', '1440p']:
-            logging.error("Invalid choice. Please choose '720p', '1080p', or '1440p'.")
-            return None, None, None, None
-
-    return url, format_choice, audio_quality, video_quality
+def prompt_continue():
+    """
+    Prompt user to continue or exit.
+    """
+    while True:
+        continue_choice = input("Do you want to download another video? (yes/no): ").strip().lower()
+        if continue_choice in ['yes', 'no']:
+            return continue_choice
+        logging.error("Invalid input. Please enter 'yes' or 'no'.")
 
 def main():
     download_path = pathlib.Path.home() / "Downloads"
@@ -127,14 +123,12 @@ def main():
         return
 
     while True:
-        url, format_choice, audio_quality, video_quality = prompt_user_input()
-        if not url:
-            continue
-
-        file_path, title = download_video(url, download_path, format_choice, audio_quality, video_quality)
+        url, format_choice = prompt_user_input()
+        file_path, title = download_media(url, download_path, format_choice)
         if file_path and title:
             if format_choice == 'mp3':
-                mp3_file = convert_to_mp3(file_path, download_path, title, audio_quality)
+                logging.info(f"Attempting to convert {file_path} to MP3...")
+                mp3_file = convert_to_mp3(file_path, download_path, title)
                 if mp3_file:
                     logging.info(f"MP3 file saved as: {mp3_file}")
                 else:
@@ -145,12 +139,15 @@ def main():
                 except Exception as e:
                     logging.error(f"Error removing temporary file: {e}")
             else:
+                # For MP4, re-encode the file to ensure compatibility
                 output_file = generate_unique_filename(download_path, title, 'mp4')
-                file_path.rename(output_file)
-                os.utime(output_file, None)
-                logging.info(f"MP4 file saved as: {output_file}")
+                if reencode_to_mp4(file_path, output_file):
+                    os.remove(file_path)
+                    logging.info(f"MP4 file saved as: {output_file}")
+                else:
+                    logging.error("Failed to re-encode MP4 file.")
 
-        if input("Do you want to convert another video? (yes/no): ").strip().lower() != 'yes':
+        if prompt_continue() != 'yes':
             break
 
 if __name__ == "__main__":
