@@ -14,7 +14,7 @@ Get FFmpeg from https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip
 
 Click new and direct it to C:\YouTube Downloader\ffmpeg-2024-07-28-git-e7d3ff8dcd-full_build\bin Press “OK” to all windows
 
-Download yt2mp3.py and save it to C:\YouTube Downloader
+Download yt2mp3-4.py and save it to C:\YouTube Downloader
 
 Double click the YouTube Video Downloader.bat File to start a conversion
 
