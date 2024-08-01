@@ -1,4 +1,4 @@
-# YouTube-Downloader
+# YouTube MP3 and MP4 Downloader
 
 --- Personal YouTube Downloader ---
 
