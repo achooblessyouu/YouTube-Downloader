@@ -10,12 +10,12 @@ pip install yt-dlp
 
 pip install yt-dlp ffmpeg-python
 
-Get FFmpeg from https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip and extract the zip to C:\YouTube Downloader Open the start menu and search for environment variable at the bottom click environment variables. In the bottom window find "path" and then click “edit...”
+Get FFmpeg from https://www.gyan.dev/ffmpeg/builds/ffmpeg-git-full.7z and extract the zip to C:\YouTube Downloader Open the start menu and search for environment variable at the bottom click environment variables. In the bottom window find "path" and then click “edit...”
 
 Click new and direct it to C:\YouTube Downloader\ffmpeg-2024-07-28-git-e7d3ff8dcd-full_build\bin Press “OK” to all windows
 
-Download yt2mp3-4.py and save it to C:\YouTube Downloader
+Download ytmediadownload.py and save it to C:\YouTube Downloader
 
-Double click the YouTube Video Downloader.bat File to start a conversion
+Right click ytmediadownload.py and create a shortcut for easy access
 
 Files are saved to downloads by default
